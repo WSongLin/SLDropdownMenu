@@ -43,6 +43,11 @@ typedef NS_ENUM(NSInteger, SLImageAlignment) {
 @property (nonatomic, assign) SLImageAlignment imageAlignment;
 
 /**
+ 图片大小，默认CGSizeMake(22.f, 18.f)。
+ */
+@property (nonatomic, assign) CGSize imageSize;
+
+/**
  下拉列表数据源。
  */
 @property (nonatomic, strong) NSArray<NSString *> *dataSource;
@@ -51,6 +56,11 @@ typedef NS_ENUM(NSInteger, SLImageAlignment) {
  已选中行。
  */
 @property (nonatomic, assign, readonly) NSInteger selectedRow;
+
+/**
+ 下拉列表宽度，默认为menu本身宽度。
+ */
+@property (nonatomic, assign) CGFloat tableViewWidth;
 @property (nonatomic, strong) UIColor *tableViewBackgroundColor;
 @property (nonatomic, strong) UIColor *tableViewSeparatorColor;
 @property (nonatomic, assign) BOOL showSeparatorLine;

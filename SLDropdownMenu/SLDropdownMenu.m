@@ -82,6 +82,7 @@ static NSString * const kReuseIdentifier = @"Cell";
         _isShow = NO;
         _isFromTableViewAction = NO;
         _imageAlignment = SLImageAlignmentDefault;
+        _imageSize = CGSizeMake(22.f, 18.f);
         
         UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGestureAction:)];
         [self.contentView addGestureRecognizer:recognizer];
@@ -134,7 +135,7 @@ static NSString * const kReuseIdentifier = @"Cell";
     if (self.accessoryImage) {
         [self.imageView mas_remakeConstraints:^(MASConstraintMaker *make) {
             make.centerY.equalTo(self.titleLabel);
-            make.size.mas_equalTo(CGSizeMake(22.f, 18.f));
+            make.size.mas_equalTo(self.imageSize);
             if (SLImageAlignmentLeft == self.imageAlignment) {
                 make.left.equalTo(self.contentView.mas_left).offset(5.f);
             } else if (SLImageAlignmentRight == self.imageAlignment) {
@@ -167,6 +168,7 @@ static NSString * const kReuseIdentifier = @"Cell";
     cell.textLabel.text = self.dataSource.count > indexPath.row ? self.dataSource[indexPath.row] : @"";
     cell.textLabel.textAlignment = NSTextAlignmentCenter;
     cell.textLabel.textColor = [UIColor whiteColor];
+    cell.textLabel.font = self.titleFont ? : [UIFont systemFontOfSize:14.f];
     
     return cell;
 }
@@ -213,6 +215,7 @@ static NSString * const kReuseIdentifier = @"Cell";
 - (void)setSelectRow:(NSInteger)row {
     if (self.dataSource && self.dataSource.count > row) {
         self.titleLabel.text = self.dataSource[row];
+        self.cellSelectedIndex = row;
     }
 }
 
@@ -242,7 +245,7 @@ static NSString * const kReuseIdentifier = @"Cell";
     CGRect rect = CGRectZero;
     rect.origin.x = convertPoint.x;
     rect.origin.y = convertPoint.y;
-    rect.size.width = CGRectGetWidth(self.bounds);
+    rect.size.width = self.tableViewWidth > 0.f ? self.tableViewWidth : CGRectGetWidth(self.bounds);
     rect.size.height = height;
     
     [self.tableView setFrame:rect];
@@ -254,6 +257,12 @@ static NSString * const kReuseIdentifier = @"Cell";
     
     self.titleLabel.text = title ? : @"";
     
+    if (self.dataSource && self.dataSource.count > 0) {
+        if ([self.dataSource containsObject:title]) {
+            self.cellSelectedIndex = [self.dataSource indexOfObject:title];
+        }
+    }
+    
     [self setNeedsLayout];
 }
 
@@ -262,7 +271,9 @@ static NSString * const kReuseIdentifier = @"Cell";
     
     if (titleFont) {
         self.titleLabel.font = titleFont;
+        
         [self setNeedsLayout];
+        [self.tableView reloadData];
     }
 }
 
@@ -290,17 +301,33 @@ static NSString * const kReuseIdentifier = @"Cell";
     [self setNeedsLayout];
 }
 
+- (void)setImageSize:(CGSize)imageSize {
+    _imageSize = imageSize;
+    
+    [self setNeedsLayout];
+}
+
 - (void)setDataSource:(NSArray<NSString *> *)dataSource {
     _dataSource = dataSource;
     
     if (dataSource && dataSource.count > 0) {
-        if (!self.title || 0 == self.title.length) {
+        if (self.title && self.title.length > 0) {
+            if ([dataSource containsObject:self.title]) {
+                self.cellSelectedIndex = [dataSource indexOfObject:self.title];
+                self.titleLabel.text = self.title;
+            }
+        } else {
+            self.cellSelectedIndex = 0;
             self.titleLabel.text = dataSource[0];
         }
     }
     
     [self setNeedsLayout];
     [self.tableView reloadData];
+}
+
+- (void)setTableViewWidth:(CGFloat)tableViewWidth {
+    _tableViewWidth = tableViewWidth;
 }
 
 - (void)setTableViewBackgroundColor:(UIColor *)tableViewBackgroundColor {
