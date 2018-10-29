@@ -83,6 +83,11 @@
         _dropdownMenu = [[SLDropdownMenu alloc] init];
         _dropdownMenu.accessoryImage = [UIImage imageNamed:@"down_arrow_fill_white"];
         _dropdownMenu.delegate = self;
+        _dropdownMenu.dimmingViewColorAlpha = 0.6f;
+        _dropdownMenu.popoverModel = SLPopoverViewModelBubble;
+//        _dropdownMenu.popoverViewBackgroundColor = [UIColor redColor];
+        _dropdownMenu.bubbleStrokeColor = [UIColor yellowColor];
+        _dropdownMenu.bubbleFillColor = [UIColor blackColor];
     }
     
     return _dropdownMenu;
@@ -96,6 +101,11 @@
         menu.backgroundColor = [UIColor colorWithRed:99.f / 255.f green:184.f / 255 blue:255.f / 255 alpha:1.f];
         menu.accessoryImage = [UIImage imageNamed:@"down_arrow_fill_white"];
         menu.dataSource = self.networkInfos;
+        menu.popoverModel = SLPopoverViewModelBubble;
+//        menu.popoverViewBackgroundColor = [UIColor redColor];
+//        menu.bubbleStrokeColor = [UIColor redColor];
+        menu.bubbleFillColor = [UIColor blackColor];
+        menu.bubblePosition = SLBubblePositionLeft;
         [self.view addSubview:menu];
         
         _networkDropdownMenu = menu;

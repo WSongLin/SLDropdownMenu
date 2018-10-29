@@ -16,60 +16,64 @@
 
 #define SCREEN_SIZE [[UIScreen mainScreen] bounds].size
 
-@class SLDropdownMenuTableView;
-
 static NSString * const kReuseIdentifier = @"Cell";
 
-@protocol SLDropdownMenuTableViewDelegate <NSObject>
+@class SLDimmingView;
+
+@protocol SLDimmingViewDelegate <NSObject>
 
 @optional
-
 /**
  发生在tableView区域以外的事件。
  
- @param tableView   tableView本身
- @param point       点击在tableView区域以外的坐标点
+ @param dimmingView   SLDimmingView对象
+ @param point         点击坐标点
  */
-- (void)tableView:(SLDropdownMenuTableView *)tableView hitTestOutsideAtPoint:(CGPoint)point;
+- (void)dimmingView:(SLDimmingView *)dimmingView hitTestAtPoint:(CGPoint)point;
 
 @end
 
-@interface SLDropdownMenuTableView : UITableView
+@interface SLDimmingView : UIView
 
-@property (nonatomic, weak) id<SLDropdownMenuTableViewDelegate> DMDelegate;
+@property (nonatomic, weak) id<SLDimmingViewDelegate> delegate;
 
 @end
 
-@implementation SLDropdownMenuTableView
+@implementation SLDimmingView
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     UIView *hitView = [super hitTest:point withEvent:event];
-    if (![hitView isDescendantOfView:self]) {
-        if ([self.DMDelegate respondsToSelector:@selector(tableView:hitTestOutsideAtPoint:)]) {
-            [self.DMDelegate tableView:self hitTestOutsideAtPoint:point];
+
+    //若点击本身（不包含子视图）或本身以外的区域，则让委托处理该事件。
+    if (![hitView isDescendantOfView:self] || [hitView isEqual:self]) {
+        if ([self.delegate respondsToSelector:@selector(dimmingView:hitTestAtPoint:)]) {
+            [self.delegate dimmingView:self hitTestAtPoint:point];
         }
     }
-    
+
     return hitView;
 }
 
 @end
 
-@interface SLDropdownMenu ()<UITableViewDelegate, UITableViewDataSource, SLDropdownMenuTableViewDelegate>
+@interface SLDropdownMenu ()<UITableViewDelegate, UITableViewDataSource, SLDimmingViewDelegate>
 
 @property (nonatomic, weak) UIView *containerView;
 @property (nonatomic, weak) UIView *contentView;
 @property (nonatomic, weak) UILabel *titleLabel;
 @property (nonatomic, weak) UIImageView *imageView;
-@property (nonatomic, weak) SLDropdownMenuTableView *tableView;
+
+@property (nonatomic, weak) SLDimmingView *dimmingView;
+@property (nonatomic, weak) UIView *popoverView;
+@property (nonatomic, weak) UITableView *tableView;
 
 @property (nonatomic, assign) NSInteger cellSelectedIndex;
 @property (nonatomic, assign) BOOL isShow;
 
 /**
- 用来判断行为是否来自tableView而不是来自本身内部。
+ 用来判断点击事件行为是否是来自外部。
  */
-@property (nonatomic, assign) BOOL isFromTableViewAction;
+@property (nonatomic, assign) BOOL isActionFromOutside;
 
 @end
 
@@ -80,9 +84,22 @@ static NSString * const kReuseIdentifier = @"Cell";
     if (self) {
         _cellSelectedIndex = 0;
         _isShow = NO;
-        _isFromTableViewAction = NO;
+        _isActionFromOutside = NO;
         _imageAlignment = SLImageAlignmentDefault;
         _imageSize = CGSizeMake(22.f, 18.f);
+        
+        _dimmingViewColorAlpha = 0.f;
+        
+        _popoverViewBorderWidth = 0.f;
+        _popoverViewBorderColor = [UIColor clearColor];
+        _popoverModel = SLPopoverViewModelDefault;
+        
+        _bubbleHeiht = 10.f;
+        _bubbleStrokeColor = [UIColor clearColor];
+        _bubbleFillColor = [UIColor clearColor];
+        _bubblePosition = SLBubblePositionRight;
+        
+        _tableViewEdgeInsets = UIEdgeInsetsZero;
         
         UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGestureAction:)];
         [self.contentView addGestureRecognizer:recognizer];
@@ -185,21 +202,29 @@ static NSString * const kReuseIdentifier = @"Cell";
     }
 }
 
-#pragma mark - SLDropdownMenuTableViewDelegate
-- (void)tableView:(SLDropdownMenuTableView *)tableView hitTestOutsideAtPoint:(CGPoint)point {
-    CGPoint convertPoint = [tableView convertPoint:point toView:self];
-    if (CGRectContainsPoint(self.bounds, convertPoint)) {
-        self.isFromTableViewAction = YES;
+#pragma mark - SLDimmingViewDelegate
+- (void)dimmingView:(SLDimmingView *)dimmingView hitTestAtPoint:(CGPoint)point {
+    CGPoint convertPoint = [dimmingView convertPoint:point toView:self];
+    if (CGRectContainsPoint(self.bounds, convertPoint) && self.isShow) {
+        self.isActionFromOutside = YES;
     }
     
-    [self hiddenTableView];
+    if (self.isShow) {
+        [self hiddenTableView];
+    }
+    
+    [dimmingView removeFromSuperview];
 }
 
 #pragma mark - UIGestureRecognizer
 - (void)tapGestureAction:(UIGestureRecognizer *)recognizer {
-    if (self.isFromTableViewAction) {
-        //如果事件行为来自tableView，则不需要做任何处理。
-        self.isFromTableViewAction = NO;
+    if (self.isActionFromOutside) {
+        //如果事件行为来自外部，则隐藏弹出框。
+        if (self.isShow) {
+            [self hiddenTableView];
+        }
+
+        self.isActionFromOutside = NO;
     } else {
         self.isShow = !self.isShow;
         
@@ -223,32 +248,115 @@ static NSString * const kReuseIdentifier = @"Cell";
 - (void)showTableView {
     self.isShow = YES;
     
-    CGFloat height = self.dataSource.count * self.tableView.rowHeight;
+    CGFloat height = self.dataSource.count * self.tableView.rowHeight + self.tableViewEdgeInsets.top + self.tableViewEdgeInsets.bottom + self.bubbleHeiht;
     if (height > SCREEN_SIZE.height * 4 / 5) {
         height = SCREEN_SIZE.height * 4 / 5;
     }
     
-    [self layoutTableViewWithHeight:height];
+    [self layoutPopoverViewWithHeight:height];
 }
 
 - (void)hiddenTableView {
     self.isShow = NO;
     
-    [self layoutTableViewWithHeight:0.f];
-    [self.tableView removeFromSuperview];
+    [self layoutPopoverViewWithHeight:0.f];
 }
 
-- (void)layoutTableViewWithHeight:(CGFloat)height {
-    CGPoint point = CGPointMake(CGRectGetMinX(self.bounds), CGRectGetMaxY(self.bounds));
-    CGPoint convertPoint = [self convertPoint:point toView:self.window];
+- (void)layoutPopoverViewWithHeight:(CGFloat)height {
+    if (height > 0.f) {
+        CGFloat x = CGRectGetMinX(self.bounds);
+        CGFloat y = CGRectGetMaxY(self.bounds);
+        CGFloat width = SCREEN_SIZE.width;
+        
+        if ((x + self.popoverViewWidth) > width) {
+            x = width - self.popoverViewWidth;
+        }
+        
+        if (self.popoverViewWidth >= width) {
+            self.popoverViewWidth = width;
+            x = 0.f;
+        }
+        
+        CGPoint point = CGPointMake(x, y);
+        CGPoint convertPoint = [self convertPoint:point toView:self.window];
+        
+        //布局模糊背景视图
+        CGRect rect = CGRectZero;
+        rect.origin.x = 0.f;
+        rect.origin.y = convertPoint.y;
+        rect.size.width = width;
+        rect.size.height = SCREEN_SIZE.height - y;
+        
+        [self.dimmingView setFrame:rect];
+        self.dimmingView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:self.dimmingViewColorAlpha];
+        
+        //布局弹出框视图
+        rect.origin.x = convertPoint.x;
+        rect.origin.y = 0.f;
+        rect.size.width = self.popoverViewWidth > 0.f ? self.popoverViewWidth : CGRectGetWidth(self.bounds);
+        rect.size.height = height;
+        [self.popoverView setFrame:rect];
+        [self.window bringSubviewToFront:self.popoverView];
+        self.popoverView.backgroundColor = self.popoverViewBackgroundColor ? : [UIColor clearColor];
+        
+        //布局下拉列表
+        y = CGRectGetMinY(self.popoverView.bounds) + self.tableViewEdgeInsets.top;
+        if (SLPopoverViewModelBubble == self.popoverModel) {
+            y += self.bubbleHeiht;
+            
+            [self drawBubbleLayer];
+        }
+        
+        rect.origin.x = CGRectGetMinX(self.popoverView.bounds) + self.tableViewEdgeInsets.left;
+        rect.origin.y = y;
+        rect.size.width = CGRectGetWidth(self.popoverView.bounds) - self.tableViewEdgeInsets.left - self.tableViewEdgeInsets.right;
+        rect.size.height = CGRectGetHeight(self.popoverView.bounds) - self.tableViewEdgeInsets.bottom - y;
+        [self.tableView setFrame:rect];
+        [self.popoverView bringSubviewToFront:self.tableView];
+    } else {
+        [self.tableView removeFromSuperview];
+        [self.popoverView removeFromSuperview];
+        [self.dimmingView removeFromSuperview];
+    }
+}
+
+- (void)drawBubbleLayer {
+    //等腰三角形顶点
+    CGPoint triangleTopPoint = CGPointMake(CGRectGetMaxX(self.popoverView.bounds) - 20.f, 0.f);
+    if (SLBubblePositionLeft == self.bubblePosition) {
+        triangleTopPoint = CGPointMake(CGRectGetMinX(self.popoverView.bounds) + 20.f, 0.f);
+    } else if (SLBubblePositionMiddle == self.bubblePosition) {
+        triangleTopPoint = CGPointMake(CGRectGetMidX(self.popoverView.bounds), 0.f);
+    }
     
-    CGRect rect = CGRectZero;
-    rect.origin.x = convertPoint.x;
-    rect.origin.y = convertPoint.y;
-    rect.size.width = self.tableViewWidth > 0.f ? self.tableViewWidth : CGRectGetWidth(self.bounds);
-    rect.size.height = height;
+    //等腰三角形左边点
+    CGPoint triangleLeftPoint = CGPointMake(triangleTopPoint.x - 10.f, triangleTopPoint.y + self.bubbleHeiht);
+    //边框线上左点
+    CGPoint borderLineLeftTopPoint = CGPointMake(0.f, triangleLeftPoint.y);
+    //边框线下左点
+    CGPoint borderLineLeftBottomPoint = CGPointMake(0.f, CGRectGetMaxY(self.popoverView.bounds));
+    //边框线下右点
+    CGPoint borderLineRightBottomPoint = CGPointMake(CGRectGetMaxX(self.popoverView.bounds), borderLineLeftBottomPoint.y);
+    //边框线上右点
+    CGPoint borderLineRightTopPoint = CGPointMake(borderLineRightBottomPoint.x, triangleLeftPoint.y);
+    //等腰三角形右边点
+    CGPoint triangleRightPoint = CGPointMake(triangleTopPoint.x + 10.f, triangleLeftPoint.y);
     
-    [self.tableView setFrame:rect];
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    [path moveToPoint:triangleTopPoint];
+    [path addLineToPoint:triangleLeftPoint];
+    [path addLineToPoint:borderLineLeftTopPoint];
+    [path addLineToPoint:borderLineLeftBottomPoint];
+    [path addLineToPoint:borderLineRightBottomPoint];
+    [path addLineToPoint:borderLineRightTopPoint];
+    [path addLineToPoint:triangleRightPoint];
+    [path closePath];
+    
+    CAShapeLayer *layer = [CAShapeLayer layer];
+    layer.strokeColor = self.bubbleStrokeColor.CGColor;
+    layer.fillColor = self.bubbleFillColor.CGColor;
+    layer.path = path.CGPath;
+    [self.popoverView.layer addSublayer:layer];
 }
 
 #pragma mark - Setter
@@ -326,10 +434,6 @@ static NSString * const kReuseIdentifier = @"Cell";
     [self.tableView reloadData];
 }
 
-- (void)setTableViewWidth:(CGFloat)tableViewWidth {
-    _tableViewWidth = tableViewWidth;
-}
-
 - (void)setTableViewBackgroundColor:(UIColor *)tableViewBackgroundColor {
     _tableViewBackgroundColor = tableViewBackgroundColor;
     
@@ -404,19 +508,42 @@ static NSString * const kReuseIdentifier = @"Cell";
     return _imageView;
 }
 
-- (SLDropdownMenuTableView *)tableView {
+- (SLDimmingView *)dimmingView {
+    if (!_dimmingView) {
+        SLDimmingView *view = [[SLDimmingView alloc] init];
+        view.delegate = self;
+        [self.window addSubview:view];
+        
+        _dimmingView = view;
+    }
+    
+    return _dimmingView;
+}
+
+- (UIView *)popoverView {
+    if (!_popoverView) {
+        UIView *view = [[UIView alloc] init];
+        view.backgroundColor = [UIColor clearColor];
+        [self.dimmingView addSubview:view];
+        
+        _popoverView = view;
+    }
+    
+    return _popoverView;
+}
+
+- (UITableView *)tableView {
     if (!_tableView) {
-        SLDropdownMenuTableView *tableView = [[SLDropdownMenuTableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain];
+        UITableView *tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStylePlain];
         tableView.dataSource = self;
         tableView.delegate = self;
-        tableView.DMDelegate = self;
         tableView.rowHeight = 44.f;
-        tableView.backgroundColor = RGBA_COLOR(31.f, 37.f, 61.f, 0.85f);
+        tableView.backgroundColor = [UIColor blackColor];
         tableView.tableFooterView = [UIView new];
         tableView.separatorInset = UIEdgeInsetsZero;
         tableView.separatorColor = [[UIColor whiteColor] colorWithAlphaComponent:0.2f];
         [tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:kReuseIdentifier];
-        [self.window addSubview:tableView];
+        [self.popoverView addSubview:tableView];
         
         _tableView = tableView;
     }
