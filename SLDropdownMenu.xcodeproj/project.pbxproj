@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		734CEC932187EE5E00A675FB /* SLSearchBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 734CEC922187EE5E00A675FB /* SLSearchBar.m */; };
+		734CEC96218808A600A675FB /* NSString+Category.m in Sources */ = {isa = PBXBuildFile; fileRef = 734CEC95218808A600A675FB /* NSString+Category.m */; };
 		73B1D70F217D805600AFD62C /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 73B1D70E217D805600AFD62C /* AppDelegate.m */; };
 		73B1D712217D805600AFD62C /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 73B1D711217D805600AFD62C /* ViewController.m */; };
 		73B1D715217D805600AFD62C /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 73B1D713217D805600AFD62C /* Main.storyboard */; };
@@ -20,6 +22,10 @@
 /* Begin PBXFileReference section */
 		19F96952387C96C3C179FD7F /* Pods-SLDropdownMenu.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SLDropdownMenu.release.xcconfig"; path = "Pods/Target Support Files/Pods-SLDropdownMenu/Pods-SLDropdownMenu.release.xcconfig"; sourceTree = "<group>"; };
 		58A3A0A772FCA875DA3B9029 /* libPods-SLDropdownMenu.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SLDropdownMenu.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		734CEC912187EE5E00A675FB /* SLSearchBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SLSearchBar.h; sourceTree = "<group>"; };
+		734CEC922187EE5E00A675FB /* SLSearchBar.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SLSearchBar.m; sourceTree = "<group>"; };
+		734CEC94218808A600A675FB /* NSString+Category.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSString+Category.h"; sourceTree = "<group>"; };
+		734CEC95218808A600A675FB /* NSString+Category.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSString+Category.m"; sourceTree = "<group>"; };
 		73B1D70A217D805600AFD62C /* SLDropdownMenu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SLDropdownMenu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		73B1D70D217D805600AFD62C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		73B1D70E217D805600AFD62C /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -76,6 +82,8 @@
 		73B1D70C217D805600AFD62C /* SLDropdownMenu */ = {
 			isa = PBXGroup;
 			children = (
+				734CEC912187EE5E00A675FB /* SLSearchBar.h */,
+				734CEC922187EE5E00A675FB /* SLSearchBar.m */,
 				73B1D723217D9A5C00AFD62C /* SLDropdownMenu.h */,
 				73B1D724217D9A5C00AFD62C /* SLDropdownMenu.m */,
 				73B1D70D217D805600AFD62C /* AppDelegate.h */,
@@ -87,6 +95,8 @@
 				73B1D718217D806600AFD62C /* LaunchScreen.storyboard */,
 				73B1D71B217D806600AFD62C /* Info.plist */,
 				73B1D71C217D806600AFD62C /* main.m */,
+				734CEC94218808A600A675FB /* NSString+Category.h */,
+				734CEC95218808A600A675FB /* NSString+Category.m */,
 			);
 			path = SLDropdownMenu;
 			sourceTree = "<group>";
@@ -193,6 +203,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				73B1D725217D9A5C00AFD62C /* SLDropdownMenu.m in Sources */,
+				734CEC96218808A600A675FB /* NSString+Category.m in Sources */,
+				734CEC932187EE5E00A675FB /* SLSearchBar.m in Sources */,
 				73B1D712217D805600AFD62C /* ViewController.m in Sources */,
 				73B1D71D217D806600AFD62C /* main.m in Sources */,
 				73B1D70F217D805600AFD62C /* AppDelegate.m in Sources */,

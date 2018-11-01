@@ -26,7 +26,7 @@ typedef NS_ENUM(NSInteger, SLBubblePosition) {
     SLBubblePositionRight   //气泡靠右显示
 };
 
-@class SLDropdownMenu;
+@class SLDropdownMenu, SLSearchBar;
 
 @protocol SLDropdownMenuDelegate <NSObject>
 
@@ -121,6 +121,12 @@ typedef NS_ENUM(NSInteger, SLBubblePosition) {
 @property (nonatomic, strong) UIColor *tableViewBackgroundColor;
 @property (nonatomic, strong) UIColor *tableViewSeparatorColor;
 @property (nonatomic, assign) BOOL showSeparatorLine;
+
+/**
+ 显示搜索框，默认NO（不显示）
+ */
+@property (nonatomic, assign) BOOL showSearchBar;
+@property (nonatomic, strong) SLSearchBar *searchBar;
 
 @property (nonatomic, weak) id<SLDropdownMenuDelegate> delegate;
 

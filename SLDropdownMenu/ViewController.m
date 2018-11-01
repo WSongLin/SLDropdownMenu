@@ -88,6 +88,9 @@
 //        _dropdownMenu.popoverViewBackgroundColor = [UIColor redColor];
         _dropdownMenu.bubbleStrokeColor = [UIColor yellowColor];
         _dropdownMenu.bubbleFillColor = [UIColor blackColor];
+        _dropdownMenu.popoverViewWidth = 350.f;
+        _dropdownMenu.bubblePosition = SLBubblePositionLeft;
+        _dropdownMenu.showSearchBar = YES;
     }
     
     return _dropdownMenu;
@@ -105,7 +108,8 @@
 //        menu.popoverViewBackgroundColor = [UIColor redColor];
 //        menu.bubbleStrokeColor = [UIColor redColor];
         menu.bubbleFillColor = [UIColor blackColor];
-        menu.bubblePosition = SLBubblePositionLeft;
+        menu.bubblePosition = SLBubblePositionMiddle;
+
         [self.view addSubview:menu];
         
         _networkDropdownMenu = menu;

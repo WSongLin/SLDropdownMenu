@@ -7,7 +7,9 @@
 //
 
 #import "SLDropdownMenu.h"
+#import "SLSearchBar.h"
 #import "Masonry.h"
+#import "NSString+Category.h"
 
 #define RGBA_COLOR(r, g, b, a) [UIColor colorWithRed:r / 255.f\
                                                green:g / 255.f\
@@ -56,7 +58,7 @@ static NSString * const kReuseIdentifier = @"Cell";
 
 @end
 
-@interface SLDropdownMenu ()<UITableViewDelegate, UITableViewDataSource, SLDimmingViewDelegate>
+@interface SLDropdownMenu ()<UITableViewDelegate, UITableViewDataSource, SLDimmingViewDelegate, SLSearchBarDelegate>
 
 @property (nonatomic, weak) UIView *containerView;
 @property (nonatomic, weak) UIView *contentView;
@@ -69,6 +71,7 @@ static NSString * const kReuseIdentifier = @"Cell";
 
 @property (nonatomic, assign) NSInteger cellSelectedIndex;
 @property (nonatomic, assign) BOOL isShow;
+@property (nonatomic, strong) NSArray *resultDatas;
 
 /**
  用来判断点击事件行为是否是来自外部。
@@ -100,6 +103,9 @@ static NSString * const kReuseIdentifier = @"Cell";
         _bubblePosition = SLBubblePositionRight;
         
         _tableViewEdgeInsets = UIEdgeInsetsZero;
+        
+        _showSearchBar = NO;
+        _resultDatas = @[];
         
         UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGestureAction:)];
         [self.contentView addGestureRecognizer:recognizer];
@@ -172,7 +178,7 @@ static NSString * const kReuseIdentifier = @"Cell";
 
 #pragma mark - UITableViewDataSource
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return self.dataSource.count;
+    return self.resultDatas.count;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -182,7 +188,7 @@ static NSString * const kReuseIdentifier = @"Cell";
     cell.contentView.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     
-    cell.textLabel.text = self.dataSource.count > indexPath.row ? self.dataSource[indexPath.row] : @"";
+    cell.textLabel.text = self.resultDatas.count > indexPath.row ? self.resultDatas[indexPath.row] : @"";
     cell.textLabel.textAlignment = NSTextAlignmentCenter;
     cell.textLabel.textColor = [UIColor whiteColor];
     cell.textLabel.font = self.titleFont ? : [UIFont systemFontOfSize:14.f];
@@ -192,14 +198,18 @@ static NSString * const kReuseIdentifier = @"Cell";
 
 #pragma mark - UITableViewDelegate
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    [self hiddenTableView];
+    NSString *string = self.resultDatas.count > indexPath.row ? self.resultDatas[indexPath.row] : @"";
+    self.titleLabel.text = string;
     
-    self.titleLabel.text = self.dataSource.count > indexPath.row ? self.dataSource[indexPath.row] : @"";
-    self.cellSelectedIndex = indexPath.row;
+    if ([self.dataSource containsObject:string]) {
+        self.cellSelectedIndex = [self.dataSource indexOfObject:string];
+    }
     
     if ([self.delegate respondsToSelector:@selector(dropdownMenu:didSelectedRow:)]) {
-        [self.delegate dropdownMenu:self didSelectedRow:indexPath.row];
+        [self.delegate dropdownMenu:self didSelectedRow:self.cellSelectedIndex];
     }
+    
+    [self hiddenTableView];
 }
 
 #pragma mark - SLDimmingViewDelegate
@@ -214,6 +224,26 @@ static NSString * const kReuseIdentifier = @"Cell";
     }
     
     [dimmingView removeFromSuperview];
+}
+
+#pragma mark - SLSearchBarDelegate
+- (void)searchBar:(SLSearchBar *)searchBar textDidChange:(NSString *)searchText {
+    NSMutableArray *results = @[].mutableCopy;
+    
+    if (searchText && searchText.length > 0) {
+        for (NSString *string in self.dataSource) {
+            NSString *convertString = [NSString convertText:string];
+            if ([convertString rangeOfString:searchText options:NSCaseInsensitiveSearch].length > 0) {
+                [results addObject:string];
+            }
+        }
+        
+        self.resultDatas = results.mutableCopy;
+    } else {
+        self.resultDatas = [NSArray arrayWithArray:self.dataSource];
+    }
+    
+    [self.tableView reloadData];
 }
 
 #pragma mark - UIGestureRecognizer
@@ -258,6 +288,7 @@ static NSString * const kReuseIdentifier = @"Cell";
 
 - (void)hiddenTableView {
     self.isShow = NO;
+    self.resultDatas = [NSArray arrayWithArray:self.dataSource];
     
     [self layoutPopoverViewWithHeight:0.f];
 }
@@ -267,15 +298,6 @@ static NSString * const kReuseIdentifier = @"Cell";
         CGFloat x = CGRectGetMinX(self.bounds);
         CGFloat y = CGRectGetMaxY(self.bounds);
         CGFloat width = SCREEN_SIZE.width;
-        
-        if ((x + self.popoverViewWidth) > width) {
-            x = width - self.popoverViewWidth;
-        }
-        
-        if (self.popoverViewWidth >= width) {
-            self.popoverViewWidth = width;
-            x = 0.f;
-        }
         
         CGPoint point = CGPointMake(x, y);
         CGPoint convertPoint = [self convertPoint:point toView:self.window];
@@ -291,12 +313,21 @@ static NSString * const kReuseIdentifier = @"Cell";
         self.dimmingView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:self.dimmingViewColorAlpha];
         
         //布局弹出框视图
-        rect.origin.x = convertPoint.x;
+        if (self.popoverViewWidth >= width) {
+            x = 0.f;
+            self.popoverViewWidth = width;
+        } else if ((convertPoint.x + self.popoverViewWidth) > width) {
+            x = (width - self.popoverViewWidth) / 2;
+        } else {
+            x = convertPoint.x;
+        }
+        
+        rect.origin.x = x;
         rect.origin.y = 0.f;
         rect.size.width = self.popoverViewWidth > 0.f ? self.popoverViewWidth : CGRectGetWidth(self.bounds);
         rect.size.height = height;
         [self.popoverView setFrame:rect];
-        [self.window bringSubviewToFront:self.popoverView];
+        [self.dimmingView bringSubviewToFront:self.popoverView];
         self.popoverView.backgroundColor = self.popoverViewBackgroundColor ? : [UIColor clearColor];
         
         //布局下拉列表
@@ -305,6 +336,19 @@ static NSString * const kReuseIdentifier = @"Cell";
             y += self.bubbleHeiht;
             
             [self drawBubbleLayer];
+            self.tableViewEdgeInsets = UIEdgeInsetsMake(0.5f, 0.5f, 0.5f, 0.5f);
+        }
+        
+        if (self.showSearchBar) {
+            rect.origin.x = CGRectGetMinX(self.popoverView.bounds) + 10.f;
+            rect.origin.y = y + 10.f;
+            rect.size.width = CGRectGetWidth(self.popoverView.bounds) - 20.f;
+            rect.size.height = 40.f;
+            
+            [self.searchBar setFrame:rect];
+            [self.popoverView bringSubviewToFront:self.searchBar];
+            
+            y = CGRectGetMaxY(self.searchBar.frame) + 10.f;
         }
         
         rect.origin.x = CGRectGetMinX(self.popoverView.bounds) + self.tableViewEdgeInsets.left;
@@ -314,6 +358,9 @@ static NSString * const kReuseIdentifier = @"Cell";
         [self.tableView setFrame:rect];
         [self.popoverView bringSubviewToFront:self.tableView];
     } else {
+        [self.searchBar removeFromSuperview];
+        self.searchBar = nil;//strong类型
+        
         [self.tableView removeFromSuperview];
         [self.popoverView removeFromSuperview];
         [self.dimmingView removeFromSuperview];
@@ -321,12 +368,38 @@ static NSString * const kReuseIdentifier = @"Cell";
 }
 
 - (void)drawBubbleLayer {
+    CGPoint selfMinPoint = CGPointMake(CGRectGetMinX(self.bounds), CGRectGetMaxY(self.bounds));
+    CGPoint minConvertPoint = [self convertPoint:selfMinPoint toView:self.window];
+    
+    CGPoint selfMidPoint = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMaxY(self.bounds));
+    CGPoint midConvertPoint = [self convertPoint:selfMidPoint toView:self.window];
+    
+    CGPoint selfMaxPoint = CGPointMake(CGRectGetMaxX(self.bounds), CGRectGetMaxY(self.bounds));
+    CGPoint maxConvertPoint = [self convertPoint:selfMaxPoint toView:self.window];
+    
     //等腰三角形顶点
-    CGPoint triangleTopPoint = CGPointMake(CGRectGetMaxX(self.popoverView.bounds) - 20.f, 0.f);
+    CGFloat topX = CGRectGetMaxX(self.popoverView.bounds);
+    //在做位置比较时用frame(相对父视图的位置)
+    if (CGRectGetMaxX(self.popoverView.frame) > maxConvertPoint.x) {
+        topX = maxConvertPoint.x;
+    }
+    
+    CGPoint triangleTopPoint = CGPointMake(topX - 20.f, 0.f);
+    
     if (SLBubblePositionLeft == self.bubblePosition) {
-        triangleTopPoint = CGPointMake(CGRectGetMinX(self.popoverView.bounds) + 20.f, 0.f);
+        topX = CGRectGetMinX(self.popoverView.bounds);
+        if (CGRectGetMinX(self.popoverView.frame) < minConvertPoint.x) {
+            topX = minConvertPoint.x;
+        }
+        
+        triangleTopPoint = CGPointMake(topX + 20.f, 0.f);
     } else if (SLBubblePositionMiddle == self.bubblePosition) {
-        triangleTopPoint = CGPointMake(CGRectGetMidX(self.popoverView.bounds), 0.f);
+        topX = CGRectGetMidX(self.popoverView.bounds);
+        if (CGRectGetMidX(self.popoverView.frame) != midConvertPoint.x) {
+            topX = midConvertPoint.x;
+        }
+        
+        triangleTopPoint = CGPointMake(topX, 0.f);
     }
     
     //等腰三角形左边点
@@ -353,6 +426,7 @@ static NSString * const kReuseIdentifier = @"Cell";
     [path closePath];
     
     CAShapeLayer *layer = [CAShapeLayer layer];
+    layer.lineWidth = 0.5f;
     layer.strokeColor = self.bubbleStrokeColor.CGColor;
     layer.fillColor = self.bubbleFillColor.CGColor;
     layer.path = path.CGPath;
@@ -417,6 +491,7 @@ static NSString * const kReuseIdentifier = @"Cell";
 
 - (void)setDataSource:(NSArray<NSString *> *)dataSource {
     _dataSource = dataSource;
+    self.resultDatas = [NSArray arrayWithArray:dataSource];
     
     if (dataSource && dataSource.count > 0) {
         if (self.title && self.title.length > 0) {
@@ -549,6 +624,21 @@ static NSString * const kReuseIdentifier = @"Cell";
     }
     
     return _tableView;
+}
+
+- (SLSearchBar *)searchBar {
+    if (!_searchBar) {
+        SLSearchBar *bar = [[SLSearchBar alloc] init];
+        bar.delegate = self;
+        bar.image = [UIImage imageNamed:@"search"];
+        bar.layer.borderColor = [UIColor whiteColor].CGColor;
+        bar.layer.borderWidth = 0.5f;
+        [self.popoverView addSubview:bar];
+        
+        _searchBar = bar;
+    }
+    
+    return _searchBar;
 }
 
 - (NSInteger)selectedRow {
